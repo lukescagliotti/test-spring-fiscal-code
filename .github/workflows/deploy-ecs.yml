@@ -15,11 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Esegui i test Maven
-      - name: Run Maven tests
-        run: ./mvnw clean test
-
-      # Step 3: Configura AWS CLI
+      # Step 2: Configura AWS CLI
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -27,32 +23,30 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Step 4: Login su ECR
+      # Step 3: Login su ECR
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 5: Build Docker
-      - name: Build Docker image
+      # Step 4: Build Docker e test Maven dentro Docker
+      - name: Build Docker image and run tests inside container
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: springboot-app
           IMAGE_TAG: ${{ github.ref_name }}
         run: |
+          # Build immagine Docker
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
-      # Step 6: Test API endpoint dentro container
-      - name: Test API endpoint
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: springboot-app
-          IMAGE_TAG: ${{ github.ref_name }}
-        run: |
-          echo "Avvio container per test API..."
+          # Avvia container in background per test API
           docker run -d --name test-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          sleep 10  # aspetta che l'app parta
+          sleep 15  # attendi avvio app
 
-          echo "Chiamata API /api/codice-fiscale/RSSMRA93E20A562S..."
+          # Test Maven all'interno del container
+          docker exec test-container mvn test
+
+          # Test API endpoint
+          echo "Chiamata API /api/codice-fiscale/SCGLCU00P26D773Q..."
           RESPONSE=$(curl --silent http://localhost:8080/api/codice-fiscale/SCGLCU00P26D773Q)
           echo "API response: $RESPONSE"
 
@@ -75,7 +69,7 @@ jobs:
           docker stop test-container
           docker rm test-container
 
-      # Step 7: Push su ECR
+      # Step 5: Push su ECR
       - name: Push Docker image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
