@@ -35,8 +35,8 @@ jobs:
           ECR_REPOSITORY: springboot-app
           IMAGE_TAG: ${{ github.ref_name }}
         run: |
-          # Build immagine Docker (i test Maven sono eseguiti nel Dockerfile)
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Build immagine Docker
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
 
       # Step 5: Test API endpoint nel container runtime
       - name: Test API endpoint
@@ -81,3 +81,4 @@ jobs:
           IMAGE_TAG: ${{ github.ref_name }}
         run: |
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
