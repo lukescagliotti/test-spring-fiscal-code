@@ -1,0 +1,20 @@
+{
+  "family": "codice-fiscale-api-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "codice-fiscale-api",
+      "image": "${ECR_REGISTRY}/codice-fiscale-api:${IMAGE_TAG}",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true
+    }
+  ]
+}
