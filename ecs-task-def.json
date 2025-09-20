@@ -1,20 +1,29 @@
 {
-  "family": "codice-fiscale-api-task",
+  "family": "springboot-task",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
+  "cpu": "512",
+  "memory": "1024",
   "containerDefinitions": [
     {
-      "name": "codice-fiscale-api",
-      "image": "${ECR_REGISTRY}/codice-fiscale-api:${IMAGE_TAG}",
+      "name": "springboot-app",
+      "image": "302263088947.dkr.ecr.eu-north-1.amazonaws.com/springboot-app:latest",
+      "essential": true,
       "portMappings": [
         {
           "containerPort": 8080,
+          "hostPort": 8080,
           "protocol": "tcp"
         }
       ],
-      "essential": true
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/springboot-task",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
     }
   ]
 }
