@@ -40,7 +40,12 @@ Risposta:
 }
 ```
 
+## Test
+Sono presenti test automatici su estrazione data di nascita, età e gestione errori. Per eseguirli:
 
+```sh
+mvn test
+```
 
 ## Note
 La logica di estrazione della data di nascita dal codice fiscale è semplificata e va adattata per casi reali.
