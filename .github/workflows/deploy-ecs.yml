@@ -28,22 +28,26 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 4: Build Docker e test Maven dentro Docker
-      - name: Build Docker image and run tests inside container
+      # Step 4: Build Docker e test Maven nel Dockerfile
+      - name: Build Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: springboot-app
           IMAGE_TAG: ${{ github.ref_name }}
         run: |
-          # Build immagine Docker
+          # Build immagine Docker (i test Maven sono eseguiti nel Dockerfile)
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
+      # Step 5: Test API endpoint nel container runtime
+      - name: Test API endpoint
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: springboot-app
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
           # Avvia container in background per test API
           docker run -d --name test-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           sleep 15  # attendi avvio app
-
-          # Test Maven all'interno del container
-          docker exec test-container mvn test
 
           # Test API endpoint
           echo "Chiamata API /api/codice-fiscale/SCGLCU00P26D773Q..."
@@ -69,7 +73,7 @@ jobs:
           docker stop test-container
           docker rm test-container
 
-      # Step 5: Push su ECR
+      # Step 6: Push Docker image to ECR
       - name: Push Docker image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
