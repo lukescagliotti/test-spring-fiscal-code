@@ -1,19 +1,25 @@
-name: AWS Connection Check
+name: Build, Test Docker and Deploy to ECR
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*'  # parte solo quando viene creato un tag
 
 jobs:
-  aws-check:
+  build-and-push:
     runs-on: ubuntu-latest
     environment: env-for-pipeline
 
     steps:
+      # Step 1: Checkout del codice
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Step 2: Esegui i test Maven
+      - name: Run Maven tests
+        run: ./mvnw clean test
+
+      # Step 3: Configura AWS CLI
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -21,7 +27,59 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Test AWS connection
+      # Step 4: Login su ECR
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Step 5: Build Docker
+      - name: Build Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: springboot-app
+          IMAGE_TAG: ${{ github.ref_name }}
         run: |
-          echo "Listing ECR repositories to check connection..."
-          aws ecr describe-repositories
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+
+      # Step 6: Test API endpoint dentro container
+      - name: Test API endpoint
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: springboot-app
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
+          echo "Avvio container per test API..."
+          docker run -d --name test-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          sleep 10  # aspetta che l'app parta
+
+          echo "Chiamata API /api/codice-fiscale/RSSMRA93E20A562S..."
+          RESPONSE=$(curl --silent http://localhost:8080/api/codice-fiscale/SCGLCU00P26D773Q)
+          echo "API response: $RESPONSE"
+
+          # Assert sulla presenza delle chiavi
+          if ! echo "$RESPONSE" | grep -q '"data_nascita"'; then
+            echo "data_nascita non presente nella risposta"
+            docker stop test-container
+            docker rm test-container
+            exit 1
+          fi
+
+          if ! echo "$RESPONSE" | grep -q '"eta"'; then
+            echo "eta non presente nella risposta"
+            docker stop test-container
+            docker rm test-container
+            exit 1
+          fi
+
+          echo "Test API completato con successo!"
+          docker stop test-container
+          docker rm test-container
+
+      # Step 7: Push su ECR
+      - name: Push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: springboot-app
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
