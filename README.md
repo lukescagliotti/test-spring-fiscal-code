@@ -4,9 +4,10 @@ Questa applicazione Spring Boot espone una API REST che, dato un codice fiscale,
 
 ## Requisiti
 - Java 17 installato
-- Maven installato
+- Maven installato 
+- in alternativa, docker installato
 
-## Come avviare il progetto
+## Come avviare il progetto in locale con maven
 
 1. Clona la repository o copia i file su un nuovo computer.
 2. Apri un terminale nella cartella del progetto.
@@ -25,6 +26,17 @@ mvn spring-boot:run
 5. Accedi alla documentazione Swagger:
 
 [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+
+## In alternativa, Avvio con Docker
+È possibile avviare l'applicazione localmente usando Docker:
+
+```sh
+docker build -t springboot-app:local .
+docker run -p 8080:8080 springboot-app:local
+```
+
+L'applicazione sarà disponibile su `http://localhost:8080`.
+
 
 ## Esempio di chiamata API
 
@@ -46,6 +58,16 @@ Sono presenti test automatici su estrazione data di nascita, età e gestione err
 ```sh
 mvn test
 ```
+
+## Pipeline CI/CD
+È stata configurata una pipeline GitHub Actions che esegue le seguenti operazioni:
+
+1. Build del progetto e dei test Maven.
+2. Build dell'immagine Docker.
+3. Test dell'API `/api/codice-fiscale/{codiceFiscale}` all'interno del container.
+4. Push dell'immagine su AWS ECR.
+
+La pipeline viene eseguita **quando viene creato un tag** nel repository e utilizza i **secrets salvati in GitHub Actions** per l'autenticazione ad AWS.
 
 ## Note
 La logica di estrazione della data di nascita dal codice fiscale è semplificata e va adattata per casi reali.
