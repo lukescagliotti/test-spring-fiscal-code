@@ -3,11 +3,12 @@ name: AWS Connection Check
 on:
   push:
     branches:
-      - main   # parte solo quando fai push su main (o puoi usare tags se vuoi)
+      - main
 
 jobs:
   aws-check:
     runs-on: ubuntu-latest
+    environment: env-for-pipelines
 
     steps:
       - name: Checkout code
